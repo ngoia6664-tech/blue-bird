@@ -58,6 +58,31 @@ export async function saveDraft(input: DraftInput, loadedRev: number): Promise<D
   return saved
 }
 
+// IndexedDB writes are async: a tab closed mid-write may lose the last edits. On pagehide we also
+// write a synchronous localStorage copy, merged back into the draft queue next time the chapter opens.
+const emergencyKey = (workId: string, chapterId: string) => `emergency:${key(workId, chapterId)}`
+interface Emergency { input: DraftInput; loadedRev: number }
+
+export function writeEmergency(input: DraftInput, loadedRev: number) {
+  try {
+    localStorage.setItem(emergencyKey(input.workId, input.chapterId), JSON.stringify({ input, loadedRev } satisfies Emergency))
+  } catch (e) {
+    console.error('Không ghi được bản khẩn cấp', e) // quota: the IndexedDB save is still in flight
+  }
+}
+
+export const clearEmergency = (workId: string, chapterId: string) => localStorage.removeItem(emergencyKey(workId, chapterId))
+
+/** Move a leftover emergency copy into the draft queue if it is newer than the stored draft. */
+export async function recoverEmergency(workId: string, chapterId: string) {
+  const raw = localStorage.getItem(emergencyKey(workId, chapterId))
+  if (!raw) return
+  const { input, loadedRev } = JSON.parse(raw) as Emergency
+  const draft = await getDraft(workId, chapterId)
+  if (!draft || draft.savedAt < input.savedAt) await saveDraft(input, loadedRev)
+  clearEmergency(workId, chapterId)
+}
+
 /** User resolved a conflict by keeping this device's text on top of the server's `serverRev`. */
 export async function keepDraftOver(workId: string, chapterId: string, serverRev: number) {
   await update<Draft | undefined>(key(workId, chapterId), (d) => d && { ...d, baseRev: serverRev, conflict: false }, store)
@@ -73,24 +98,25 @@ async function refreshPending() {
   setStatus({ pending: (await myDrafts()).filter(([, d]) => !d.synced).length })
 }
 
-let running = false
+let running: Promise<void> | null = null
 let again = false
 
-/** Push every pending draft, one at a time. Safe to call often. */
-export async function flush(): Promise<void> {
-  if (running) return void (again = true)
-  running = true
-  try {
-    // One pusher across tabs, so two tabs never race the same draft into a false conflict.
-    await navigator.locks.request('novel-studio-sync', async () => {
+/** Push every pending draft, one at a time. Safe to call often; resolves when the queue is drained. */
+export function flush(): Promise<void> {
+  if (running) {
+    again = true
+    return running
+  }
+  // One pusher across tabs, so two tabs never race the same draft into a false conflict.
+  running = navigator.locks
+    .request('novel-studio-sync', async () => {
       do {
         again = false
         await flushOnce()
       } while (again)
     })
-  } finally {
-    running = false
-  }
+    .finally(() => (running = null))
+  return running
 }
 
 async function flushOnce() {

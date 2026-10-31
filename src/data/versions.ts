@@ -1,11 +1,19 @@
-import { addDoc, getCountFromServer, getDocs, limit, orderBy, query, where } from 'firebase/firestore'
+import { doc, getCountFromServer, getDocs, limit, orderBy, query, setDoc, where } from 'firebase/firestore'
 import { AUTO_SNAPSHOTS_KEPT } from '../config'
 import type { Version, VersionKind } from '../types'
 import { versionsCol } from './refs'
 import { deleteAll } from './works'
 
+/**
+ * Online: resolves once the server has the version. Offline: Firestore keeps it locally and uploads
+ * it later, so a safety snapshot never blocks (or hangs) the action it protects.
+ */
 export async function addVersion(workId: string, chapterId: string, json: string, kind: VersionKind, label = '') {
-  await addDoc(versionsCol(workId, chapterId), { json, kind, label, createdAt: Date.now() })
+  const ref = doc(versionsCol(workId, chapterId))
+  const p = setDoc(ref, { json, kind, label, createdAt: Date.now() })
+  if (navigator.onLine) await p
+  else p.catch((e) => console.error('Lưu phiên bản thất bại', e))
+  return ref.id
 }
 
 // shortcut: loads full text of the newest 50 versions; split meta/content if lists get slow.

@@ -5,7 +5,7 @@ import { contentDoc } from '../data/refs'
 import { addVersion } from '../data/versions'
 import { countWords, formatDate, formatNumber } from '../format'
 import { decideOnOpen, type Draft } from '../sync/drafts'
-import { discardDraft, getDraft, keepDraftOver } from '../sync/engine'
+import { discardDraft, getDraft, keepDraftOver, recoverEmergency } from '../sync/engine'
 import type { ChapterContent } from '../types'
 import { ChapterEditor, type ChapterEditorProps } from './ChapterEditor'
 
@@ -28,6 +28,7 @@ export function ChapterPane(props: PaneProps) {
     let live = true
     setLoad({ state: 'loading' })
     ;(async (): Promise<Load> => {
+      await recoverEmergency(workId, chapter.id)
       const draft = await getDraft(workId, chapter.id)
       let server: ChapterContent | null
       try {

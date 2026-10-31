@@ -14,8 +14,10 @@ export const chaptersCol = (workId: string) => collection(workDoc(workId), 'chap
 export const chapterDoc = (workId: string, chapterId: string) => doc(chaptersCol(workId), chapterId)
 export const contentDoc = (workId: string, chapterId: string) =>
   doc(workDoc(workId), 'contents', chapterId)
+export const contentsCol = (workId: string) => collection(workDoc(workId), 'contents')
 export const versionsCol = (workId: string, chapterId: string) =>
   collection(chapterDoc(workId, chapterId), 'versions')
+export const bibleCol = (workId: string) => collection(workDoc(workId), 'bible')
 
 /**
  * Metadata writes: wait for the server when online so errors surface; offline, Firestore keeps

@@ -6,3 +6,5 @@ dist
 test-results
 playwright-report
 tsconfig.tsbuildinfo
+.qa/*results*/
+.qa/.qa/

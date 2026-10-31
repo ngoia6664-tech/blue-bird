@@ -1,7 +1,7 @@
 import { deleteDoc, getDoc, getDocs, updateDoc, writeBatch, doc, type DocumentReference } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Work } from '../types'
-import { chaptersCol, commit, contentDoc, coverDoc, versionsCol, workDoc, worksCol } from './refs'
+import { bibleCol, chaptersCol, commit, contentDoc, coverDoc, versionsCol, workDoc, worksCol } from './refs'
 
 export type WorkInput = Pick<Work, 'title' | 'aliases' | 'genre' | 'tags' | 'status' | 'description' | 'privateNote'>
 
@@ -44,6 +44,7 @@ export async function deleteWorkForever(workId: string) {
     for (const v of (await getDocs(versionsCol(workId, ch.id))).docs) refs.push(v.ref)
     refs.push(contentDoc(workId, ch.id), ch.ref)
   }
+  for (const b of (await getDocs(bibleCol(workId))).docs) refs.push(b.ref)
   refs.push(coverDoc(workId))
   await deleteAll(refs)
   await deleteDoc(workDoc(workId))

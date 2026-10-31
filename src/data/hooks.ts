@@ -1,7 +1,7 @@
-﻿import { onSnapshot, type DocumentReference, type Query } from 'firebase/firestore'
+import { onSnapshot, type DocumentReference, type Query } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
-import type { Chapter, Work } from '../types'
-import { chaptersCol, workDoc, worksCol } from './refs'
+import type { BibleItem, Chapter, Work } from '../types'
+import { bibleCol, chaptersCol, workDoc, worksCol } from './refs'
 
 interface Live<T> {
   data: T | undefined
@@ -50,3 +50,7 @@ export function useChapters(workId: string | undefined) {
   const data = useMemo(() => live.data?.slice().sort((a, b) => a.order - b.order), [live.data])
   return { error: live.error, data }
 }
+
+/** Every Story Bible entry of a work (including trashed); small docs, one listener. */
+export const useBible = (workId: string | undefined) =>
+  useLiveQuery<BibleItem>(() => (workId ? bibleCol(workId) : null), [workId])

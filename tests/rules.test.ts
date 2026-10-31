@@ -43,6 +43,17 @@ describe('firestore.rules', () => {
     await assertFails(getDoc(doc(db, work)))
   })
 
+  it('protects Story Bible entries like every other part of a work', async () => {
+    const owner = env.authenticatedContext('owner', { email: OWNER_EMAIL, email_verified: true }).firestore()
+    await assertSucceeds(setDoc(doc(owner, `${work}/bible/b1`), { kind: 'character', name: 'Hare' }))
+    await assertSucceeds(getDoc(doc(owner, `${work}/bible/b1`)))
+    const other = env.authenticatedContext('other', { email: OWNER_EMAIL, email_verified: true }).firestore()
+    await assertFails(getDoc(doc(other, `${work}/bible/b1`)))
+    await assertFails(setDoc(doc(other, `${work}/bible/b2`), { name: 'x' }))
+    const stranger = env.authenticatedContext('owner', { email: 'stranger@gmail.com', email_verified: true }).firestore()
+    await assertFails(getDoc(doc(stranger, `${work}/bible/b1`)))
+  })
+
   it('blocks signed-out access and paths outside users/', async () => {
     await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), work)))
     const db = env.authenticatedContext('owner', { email: OWNER_EMAIL, email_verified: true }).firestore()

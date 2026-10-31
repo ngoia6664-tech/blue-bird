@@ -1,14 +1,15 @@
-import { BookOpen, Feather, LogIn, LogOut, PenLine, Settings as SettingsIcon } from 'lucide-react'
-import { NavLink, Outlet, ScrollRestoration } from 'react-router'
+import { BookMarked, BookOpen, Feather, LogIn, LogOut, PenLine, RefreshCw, Settings as SettingsIcon } from 'lucide-react'
+import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { signInWithGoogle, signOutUser, useAuth } from '../auth/AuthProvider'
 import { APP_NAME } from '../config'
 import { useSyncStatus } from '../sync/engine'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export const lastWorkKey = 'novel-studio-last-work'
 
 export function AppLayout() {
   const auth = useAuth()
+  useLocation() // re-render on navigation so the Viết / Sổ tay links follow the last opened work
   if (auth.status === 'loading') return <div className="center-screen">Đang tải…</div>
   if (auth.status === 'signedOut') return <LoginScreen />
   if (auth.status === 'denied') {
@@ -35,6 +36,7 @@ export function AppLayout() {
         <nav className="tabs" aria-label="Điều hướng chính">
           <NavLink to="/" end><BookOpen size={18} /><span>Thư viện</span></NavLink>
           <NavLink to={lastWork ? `/write/${lastWork}` : '/write'}><PenLine size={18} /><span>Viết</span></NavLink>
+          <NavLink to={lastWork ? `/bible/${lastWork}` : '/bible'}><BookMarked size={18} /><span>Sổ tay truyện</span></NavLink>
           <NavLink to="/settings"><SettingsIcon size={18} /><span>Cài đặt</span></NavLink>
         </nav>
         <SyncBadge />
@@ -42,6 +44,7 @@ export function AppLayout() {
           {auth.user.photoURL ? <img src={auth.user.photoURL} alt="" referrerPolicy="no-referrer" /> : (auth.user.email ?? '?')[0]}
         </NavLink>
       </header>
+      <UpdateBar />
       <main className="main">
         <Outlet />
       </main>
@@ -66,6 +69,23 @@ export function SyncBadge() {
       <span className="dot" aria-hidden="true" />
       <span className="sync-text">{label}</span>
     </span>
+  )
+}
+
+/** A new app version is installed and waiting: reload when the writer chooses, never by surprise. */
+function UpdateBar() {
+  const [waiting, setWaiting] = useState<ServiceWorker | null>(null)
+  useEffect(() => {
+    const on = (e: Event) => setWaiting((e as CustomEvent<ServiceWorker>).detail)
+    window.addEventListener('sw-update', on)
+    return () => window.removeEventListener('sw-update', on)
+  }, [])
+  if (!waiting) return null
+  return (
+    <div className="notice update-bar" role="status">
+      Có phiên bản mới của ứng dụng.{' '}
+      <button className="link-btn" onClick={() => waiting.postMessage('skip-waiting')}><RefreshCw size={14} /> Tải lại để cập nhật</button>
+    </div>
   )
 }
 

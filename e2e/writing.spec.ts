@@ -1,12 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
-
-const OWNER = 'ngoia6664@gmail.com'
-
-async function signIn(page: Page, email = OWNER) {
-  await page.goto('/')
-  await page.waitForFunction(() => '__signInForTest' in window)
-  await page.evaluate((e) => (window as unknown as { __signInForTest: (e: string) => Promise<unknown> }).__signInForTest(e), email)
-}
+import { signIn } from './helpers'
 
 /** A second "device": separate browser context = separate IndexedDB and Firestore cache. */
 async function newDevice(browser: Browser) {
@@ -38,7 +31,7 @@ test('writes Vietnamese text, autosaves, syncs and survives a reload', async ({ 
   await signIn(page)
   await createWork(page, `Truyện reload ${Date.now()}`)
   await typeIn(page, 'Đêm ấy, trăng sáng vằng vặc trên sông Hương.')
-  await expect(saveState(page)).toHaveText('Đã đồng bộ', { timeout: 15_000 })
+  await expect(saveState(page)).toHaveText('Đã đồng bộ lên cloud', { timeout: 15_000 })
   await expect(page.locator('.editor-foot')).toContainText('9 từ')
   await page.reload()
   await expect(editor(page)).toHaveText('Đêm ấy, trăng sáng vằng vặc trên sông Hương.')
@@ -63,7 +56,7 @@ test('keeps writing offline, then syncs to another device when back online', asy
   const title = `Truyện offline ${Date.now()}`
   await createWork(page, title)
   await typeIn(page, 'Có mạng. ')
-  await expect(saveState(page)).toHaveText('Đã đồng bộ', { timeout: 15_000 })
+  await expect(saveState(page)).toHaveText('Đã đồng bộ lên cloud', { timeout: 15_000 })
 
   await context.setOffline(true)
   await typeIn(page, 'Mất mạng vẫn viết.')
@@ -71,7 +64,7 @@ test('keeps writing offline, then syncs to another device when back online', asy
   await expect(page.locator('.sync-badge')).toContainText('Ngoại tuyến')
 
   await context.setOffline(false)
-  await expect(saveState(page)).toHaveText('Đã đồng bộ', { timeout: 30_000 })
+  await expect(saveState(page)).toHaveText('Đã đồng bộ lên cloud', { timeout: 30_000 })
 
   const phone = await newDevice(browser)
   await phone.getByRole('link', { name: title }).first().click()
@@ -83,14 +76,14 @@ test('two devices editing the same chapter: conflict is shown, nothing is lost',
   const title = `Truyện xung đột ${Date.now()}`
   await createWork(page, title)
   await typeIn(page, 'Bản gốc.')
-  await expect(saveState(page)).toHaveText('Đã đồng bộ', { timeout: 15_000 })
+  await expect(saveState(page)).toHaveText('Đã đồng bộ lên cloud', { timeout: 15_000 })
 
   const phone = await newDevice(browser)
   await phone.getByRole('link', { name: title }).first().click()
   await expect(editor(phone)).toHaveText('Bản gốc.')
 
   await typeIn(page, ' Laptop sửa.')
-  await expect(saveState(page)).toHaveText('Đã đồng bộ', { timeout: 15_000 })
+  await expect(saveState(page)).toHaveText('Đã đồng bộ lên cloud', { timeout: 15_000 })
   await typeIn(phone, ' Điện thoại sửa.')
 
   await expect(phone.getByRole('heading', { name: /đã được sửa ở thiết bị khác/ })).toBeVisible({ timeout: 15_000 })
@@ -98,7 +91,7 @@ test('two devices editing the same chapter: conflict is shown, nothing is lost',
   await expect(phone.locator('.conflict-text').nth(1)).toHaveText('Bản gốc. Laptop sửa.')
   await phone.getByRole('button', { name: 'Giữ bản trên máy này' }).click()
   await expect(editor(phone)).toHaveText('Bản gốc. Điện thoại sửa.')
-  await expect(saveState(phone)).toHaveText('Đã đồng bộ', { timeout: 15_000 })
+  await expect(saveState(phone)).toHaveText('Đã đồng bộ lên cloud', { timeout: 15_000 })
 
   // The laptop's text was kept as a version.
   await phone.getByRole('button', { name: 'Lịch sử phiên bản', exact: true }).click()

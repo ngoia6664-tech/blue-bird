@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Novel Studio
 
 Ứng dụng viết tiểu thuyết cá nhân: thư viện tác phẩm, trình soạn thảo từng chương, tự lưu, đồng bộ giữa máy tính và điện thoại qua tài khoản Google, lịch sử phiên bản và thùng rác.
@@ -6,7 +5,14 @@
 Công nghệ: React + Vite + TypeScript, Firebase (Authentication, Cloud Firestore, Hosting), Tiptap (editor).
 Firebase dùng gói **Spark (miễn phí)**, không cần thẻ thanh toán.
 
-> Tiến độ, test đã chạy và việc còn dở: xem [HANDOFF.md](HANDOFF.md).
+Tính năng chính: tìm/thay trong chương (Ctrl+F, Ctrl+H) và toàn tác phẩm, nhập/xuất TXT·MD·DOCX, sao lưu/khôi phục ZIP, Sổ tay truyện (nhân vật, dòng thời gian, địa điểm, quy tắc văn phong…), chế độ đọc, chế độ tập trung, bản chính thức, PWA.
+
+Tài liệu:
+
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md): hướng dẫn dùng app (cho người viết)
+- [docs/FILE_MAP.md](docs/FILE_MAP.md): file nào làm gì
+- [docs/DATA_FLOW.md](docs/DATA_FLOW.md): dữ liệu đi từ editor tới Firestore thế nào, chống mất chữ ra sao
+- [HANDOFF.md](HANDOFF.md): tiến độ, test đã chạy, việc còn dở
 
 ---
 
@@ -199,7 +205,7 @@ git add .; git commit -m "..."; git push
 
 Mở `https://<project-id>.web.app` bằng Chrome hoặc Safari, đăng nhập cùng tài khoản Google, và dữ liệu sẽ đồng bộ với máy tính.
 
-Nút "cài ứng dụng" (PWA) sẽ có ở Phase 3. Hiện tại bạn có thể dùng *Thêm vào màn hình chính* của trình duyệt.
+App là PWA: trên Chrome Android chọn **Cài đặt ứng dụng**, trên Safari iPhone chọn *Chia sẻ → Thêm vào màn hình chính*. Khi có bản mới, app hiện nút **Tải lại để cập nhật**.
 
 ---
 
@@ -221,18 +227,20 @@ Nút "cài ứng dụng" (PWA) sẽ có ở Phase 3. Hiện tại bạn có th�
 ```
 src/
   auth/        đăng nhập Google, kiểm tra quyền
-  components/  khung app (topbar), menu, ảnh bìa
-  data/        đọc/ghi Firestore: tác phẩm, chương, phiên bản
+  components/  khung app (topbar), menu, hộp thoại, ảnh bìa
+  data/        đọc/ghi Firestore: tác phẩm, chương, nội dung, phiên bản, Sổ tay
   sync/        bản nháp cục bộ (IndexedDB) + đồng bộ có kiểm tra xung đột
-  editor/      trình soạn thảo chương, lịch sử phiên bản
-  pages/       Thư viện, Tạo/sửa tác phẩm, Viết, Cài đặt
+  editor/      trình soạn thảo chương, tìm/thay, tìm toàn tác phẩm, lịch sử phiên bản
+  search/      thuật toán tìm (tiếng Việt NFC/NFD) và thay trên tài liệu
+  doc/         nhập/xuất TXT, MD, DOCX
+  backup/      sao lưu/khôi phục ZIP
+  pages/       Thư viện, Tạo/sửa tác phẩm, Viết, Đọc thử, Sổ tay truyện, Cài đặt
   styles/      tokens.css (màu, font, khoảng cách) + app.css
 firestore.rules   quyền truy cập dữ liệu (phần bảo mật chính)
 tests/            test Security Rules + đồng bộ (chạy trên emulator)
 e2e/              test end-to-end (Playwright)
 ```
 
+Chi tiết từng file: [docs/FILE_MAP.md](docs/FILE_MAP.md).
+
 Muốn đổi màu, font hoặc bo góc cho toàn app, chỉ cần sửa `src/styles/tokens.css`. Muốn đổi tên app, sửa `APP_NAME` trong `src/config.ts`.
-=======
-# blue-bird
->>>>>>> d5d87006bd5b3fe1501bc59bba3aef660502d198

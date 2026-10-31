@@ -1,13 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
+import { signIn as login } from './helpers'
 
-async function login(page: Page) {
-  await page.goto('/')
-  await page.waitForFunction(() => '__signInForTest' in window)
-  await page.evaluate(() => (window as any).__signInForTest('ngoia6664@gmail.com'))
-  await expect(page.getByRole('heading', { name: 'Hôm nay viết gì nào?' })).toBeVisible()
-}
 async function work(page: Page, name: string) {
-  await page.getByRole('link', { name: 'Tạo tác phẩm', exact: true }).first().click()
+  await page.getByRole('link', { name: /^Tạo tác phẩm/ }).first().click()
   await page.getByLabel('Tên tác phẩm *').fill(`QA ${name} ${Date.now()}`)
   await page.getByRole('button', { name: 'Lưu', exact: true }).click()
   await page.getByRole('button', { name: 'Thêm chương đầu tiên' }).click()
@@ -15,12 +10,12 @@ async function work(page: Page, name: string) {
 }
 async function write(page: Page, text: string) {
   await page.locator('.prose').fill(text)
-  await expect(page.locator('.save-state')).toHaveText('Đã đồng bộ', { timeout: 15000 })
+  await expect(page.locator('.save-state')).toHaveText('Đã đồng bộ lên cloud', { timeout: 15000 })
 }
 
 test('QA validates work fields and persists metadata, alias search and status filter', async ({ page }) => {
   await login(page)
-  await page.getByRole('link', { name: 'Tạo tác phẩm', exact: true }).first().click()
+  await page.getByRole('link', { name: /^Tạo tác phẩm/ }).first().click()
   await page.getByRole('button', { name: 'Lưu', exact: true }).click()
   await expect(page.getByText('Hãy nhập tên tác phẩm.')).toBeVisible()
   await page.getByLabel('Tên tác phẩm *').fill('x'.repeat(201))
@@ -62,7 +57,7 @@ test('QA manual version restore preserves the replaced content', async ({ page }
   page.once('dialog', d => d.accept())
   await page.getByRole('button', { name: 'Khôi phục bản này' }).click()
   await expect(page.locator('.chapter-editor .prose')).toHaveText('Bản đầu tiên.')
-  await expect(page.locator('.save-state')).toHaveText('Đã đồng bộ')
+  await expect(page.locator('.save-state')).toHaveText('Đã đồng bộ lên cloud')
   await page.getByRole('button', { name: /Trước khi khôi phục/ }).click()
   await expect(page.locator('.version-preview .prose')).toHaveText('Bản thứ hai.')
 })
@@ -72,7 +67,7 @@ test('QA formatting survives reload and reports no horizontal overflow @mobile',
   await page.getByRole('button', { name: 'Đậm (Ctrl+B)', exact: true }).click()
   await page.locator('.prose').pressSequentially('Chữ đậm tiếng Việt')
   await expect(page.locator('.prose strong')).toHaveText('Chữ đậm tiếng Việt')
-  await expect(page.locator('.save-state')).toHaveText('Đã đồng bộ', { timeout: 15000 })
+  await expect(page.locator('.save-state')).toHaveText('Đã đồng bộ lên cloud', { timeout: 15000 })
   await page.reload()
   await expect(page.locator('.prose strong')).toHaveText('Chữ đậm tiếng Việt')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -93,7 +88,7 @@ test('QA second tab refreshes chapter content when editing lock transfers', asyn
   const transferred = await second.locator('.prose').innerText()
   await second.locator('.prose').press('Control+End')
   await second.locator('.prose').pressSequentially(' Viết tiếp ở tab hai.')
-  await expect(second.locator('.save-state')).toHaveText('Đã đồng bộ', { timeout: 15000 })
+  await expect(second.locator('.save-state')).toHaveText('Đã đồng bộ lên cloud', { timeout: 15000 })
   await second.reload()
   await test.info().attach('tab-transfer-content', { body: JSON.stringify({ transferred, persisted: await second.locator('.prose').innerText() }), contentType: 'application/json' })
   await expect(second.locator('.prose')).toContainText('Bản mới đã lưu từ tab một.')
@@ -109,6 +104,7 @@ test('QA remote quick note is not overwritten by leaving a previously saved info
   await expect(remote.getByLabel('Ghi chú nhanh')).toHaveValue('Ghi chú ban đầu từ máy một')
   await remote.getByLabel('Ghi chú nhanh').fill('Ghi chú từ máy thứ hai')
   await remote.getByLabel('Tiêu đề chương').click()
+  await remote.waitForTimeout(3000) // let Firestore queue the note write before the reload kills the page
   await remote.reload()
   await expect(remote.getByLabel('Ghi chú nhanh')).toHaveValue('Ghi chú từ máy thứ hai')
   await page.getByRole('button', { name: 'Lịch sử phiên bản', exact: true }).click()
@@ -121,7 +117,7 @@ test('QA cover upload replacement removal and invalid file validation', async ({
   await login(page)
   const name = `QA cover ${Date.now()}`
   const coverOne = await page.screenshot()
-  await page.getByRole('link', { name: 'Tạo tác phẩm', exact: true }).first().click()
+  await page.getByRole('link', { name: /^Tạo tác phẩm/ }).first().click()
   await page.getByLabel('Tên tác phẩm *').fill(name)
   await page.locator('input[type=file]').setInputFiles({ name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from('QA invalid image') })
   await expect(page.getByRole('alert')).toContainText('không phải ảnh')

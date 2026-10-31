@@ -1,26 +1,38 @@
 import { doc, getDoc, getDocs, updateDoc, writeBatch } from 'firebase/firestore'
+import { CHAPTER_SIZE_MAX_BYTES } from '../config'
 import { db } from '../firebase'
+import { utf8Bytes } from '../format'
+import { ChapterTooLargeError } from '../sync/push'
 import type { Chapter, ChapterContent } from '../types'
 import { chapterDoc, chaptersCol, commit, contentDoc, deviceId, versionsCol, workDoc } from './refs'
 import { deleteAll } from './works'
 
 // Counts on the Work doc (chapterCount, wordCount) are reconciled by the Writer from the chapter list.
 
-export async function createChapter(workId: string, label: string, order: number, title = '') {
+export async function createChapter(
+  workId: string, label: string, order: number, title = '',
+  content?: { json: string; text: string; words: number },
+) {
+  if (content && utf8Bytes(content.json) + utf8Bytes(content.text) > CHAPTER_SIZE_MAX_BYTES) {
+    throw new ChapterTooLargeError(`"${label}" quá dài cho một chương (giới hạn ~1 MB). Hãy chia nhỏ.`)
+  }
   const ref = doc(chaptersCol(workId))
   const now = Date.now()
   const chapter: Omit<Chapter, 'id'> = {
-    label, title, order, status: 'draft', note: '', wordCount: 0,
+    label, title, order, status: 'draft', note: '', wordCount: content?.words ?? 0,
     createdAt: now, updatedAt: now, lastSnapshotAt: 0, deletedAt: null,
   }
-  // No content doc yet: rev 0 means "empty, never saved".
+  // Without content there is no content doc yet: rev 0 means "empty, never saved".
   const batch = writeBatch(db)
   batch.set(ref, chapter)
+  if (content) {
+    batch.set(contentDoc(workId, ref.id), { json: content.json, text: content.text, rev: 1, updatedAt: now, deviceId } satisfies ChapterContent)
+  }
   await commit(batch)
   return ref.id
 }
 
-export type ChapterPatch = Partial<Pick<Chapter, 'label' | 'title' | 'status' | 'note' | 'order' | 'deletedAt'>>
+export type ChapterPatch = Partial<Pick<Chapter, 'label' | 'title' | 'status' | 'note' | 'order' | 'deletedAt' | 'canonVersionId'>>
 
 export function updateChapter(workId: string, chapterId: string, patch: ChapterPatch) {
   const batch = writeBatch(db)

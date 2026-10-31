@@ -1,9 +1,14 @@
 import { LogOut, RefreshCw } from 'lucide-react'
+import { useEffect } from 'react'
 import { signOutUser, useAuth } from '../auth/AuthProvider'
+import { BackupSection } from '../backup/BackupSection'
 import { APP_NAME } from '../config'
 import { flush, useSyncStatus } from '../sync/engine'
 
 export function Settings() {
+  useEffect(() => {
+    if (location.hash) document.querySelector(location.hash)?.scrollIntoView()
+  }, [])
   const auth = useAuth()
   const sync = useSyncStatus()
   const user = auth.status === 'ready' ? auth.user : null
@@ -34,6 +39,7 @@ export function Settings() {
           Bản nháp được lưu trên máy trước, rồi mới gửi lên máy chủ. Đừng xóa dữ liệu trình duyệt khi còn thay đổi chưa đồng bộ.
         </p>
       </section>
+      <BackupSection />
       <p className="muted small">{APP_NAME} · phiên bản {__APP_VERSION__}</p>
     </div>
   )

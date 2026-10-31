@@ -1,11 +1,13 @@
-import { CircleX, Clock, PenLine, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { BookOpen, CircleX, Clock, DatabaseBackup, Download, PenLine, Pencil, Plus, RotateCcw, Search, Trash2, Upload } from 'lucide-react'
 import { useMemo, useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { Cover } from '../components/Cover'
 import { Menu } from '../components/Menu'
-import { useWorks } from '../data/hooks'
+import { useChapters, useWorks } from '../data/hooks'
 import { deleteWorkForever, restoreWork, trashWork } from '../data/works'
+import { ExportDialog } from '../doc/ExportDialog'
+import { ImportDialog } from '../doc/ImportDialog'
 import { formatDate, formatNumber } from '../format'
 import { WORK_STATUS_LABEL, type Work, type WorkStatus } from '../types'
 
@@ -40,6 +42,8 @@ export function Library() {
   }, [works, q, filter, sort])
 
   const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [exporting, setExporting] = useState<Work | null>(null)
   async function run(action: () => Promise<unknown>) {
     setBusy(true)
     try {
@@ -95,6 +99,8 @@ export function Library() {
             {recent[0] && (
               <Link to={writeUrl(recent[0])} className="btn"><PenLine size={18} /> Mở bản nháp gần nhất</Link>
             )}
+            <button className="btn" onClick={() => setImporting(true)}><Upload size={18} /> Nhập tác phẩm</button>
+            <Link to="/settings#backup" className="btn"><DatabaseBackup size={18} /> Sao lưu dữ liệu</Link>
           </section>
         </div>
       )}
@@ -130,7 +136,11 @@ export function Library() {
         {works.length === 0 ? (
           <div className="empty">
             <p>Thư viện đang trống.</p>
-            <Link to="/works/new" className="btn primary"><Plus size={18} /> Tạo tác phẩm đầu tiên</Link>
+            <div className="row center">
+              <Link to="/works/new" className="btn primary"><Plus size={18} /> Tạo tác phẩm đầu tiên</Link>
+              <button className="btn" onClick={() => setImporting(true)}><Upload size={18} /> Nhập từ file</button>
+              <Link to="/settings#backup" className="btn"><DatabaseBackup size={18} /> Khôi phục bản sao lưu</Link>
+            </div>
           </div>
         ) : shown.length === 0 ? (
           <p className="empty muted">Không có tác phẩm phù hợp.</p>
@@ -161,7 +171,10 @@ export function Library() {
                               },
                             ]
                           : [
+                              { label: 'Viết tiếp', icon: <PenLine size={16} />, onSelect: () => navigate(writeUrl(w)) },
+                              { label: 'Đọc thử', icon: <BookOpen size={16} />, onSelect: () => navigate(`/read/${w.id}`) },
                               { label: 'Sửa thông tin', icon: <Pencil size={16} />, onSelect: () => navigate(`/works/${w.id}/edit`) },
+                              { label: 'Xuất bản thảo', icon: <Download size={16} />, onSelect: () => setExporting(w) },
                               {
                                 label: 'Đưa vào thùng rác',
                                 icon: <Trash2 size={16} />,
@@ -185,6 +198,16 @@ export function Library() {
           </ul>
         )}
       </section>
+      {importing && (
+        <ImportDialog mode="work" onClose={() => setImporting(false)} onDone={(id, ch) => navigate(`/write/${id}${ch ? `/${ch}` : ''}`)} />
+      )}
+      {exporting && <WorkExport work={exporting} onClose={() => setExporting(null)} />}
     </div>
   )
+}
+
+function WorkExport({ work, onClose }: { work: Work; onClose: () => void }) {
+  const { data } = useChapters(work.id)
+  if (!data) return null
+  return <ExportDialog workId={work.id} workTitle={work.title} chapters={data.filter((c) => !c.deletedAt)} initial="all" onClose={onClose} />
 }

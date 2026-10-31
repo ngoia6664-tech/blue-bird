@@ -2,7 +2,7 @@
 
 export type WorkStatus = 'writing' | 'paused' | 'done'
 export type ChapterStatus = 'draft' | 'revising' | 'final'
-export type VersionKind = 'auto' | 'manual' | 'pre-replace' | 'pre-restore' | 'conflict'
+export type VersionKind = 'auto' | 'manual' | 'pre-replace' | 'pre-restore' | 'pre-import' | 'conflict' | 'canon'
 
 export interface Work {
   id: string
@@ -35,6 +35,8 @@ export interface Chapter {
   createdAt: number
   updatedAt: number
   lastSnapshotAt: number
+  /** Version marked as the official ("canon") text of this chapter; a frozen snapshot. */
+  canonVersionId?: string | null
   deletedAt: number | null
 }
 
@@ -72,5 +74,27 @@ export const VERSION_KIND_LABEL: Record<VersionKind, string> = {
   manual: 'Lưu thủ công',
   'pre-replace': 'Trước khi thay thế',
   'pre-restore': 'Trước khi khôi phục',
+  'pre-import': 'Trước khi nhập file',
   conflict: 'Xung đột',
+  canon: 'Bản chính thức',
+}
+
+export type BibleKind = 'character' | 'event' | 'place' | 'note' | 'thread' | 'style'
+
+/** One Story Bible entry: works/{workId}/bible/{id}. Style rules are the single entry with id "style". */
+export interface BibleItem {
+  id: string
+  kind: BibleKind
+  name: string
+  /** Free-text fields; which ones depends on the kind (see pages/Bible.tsx). */
+  fields: Record<string, string>
+  status: string
+  order: number
+  tags: string[]
+  links: { characters: string[]; places: string[]; events: string[]; chapters: string[] }
+  /** Character relations: "Hare → Bạn học → Megumi". */
+  relations: { targetId: string; label: string }[]
+  createdAt: number
+  updatedAt: number
+  deletedAt: number | null
 }
