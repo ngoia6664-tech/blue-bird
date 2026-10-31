@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Novel Studio
 
 Ứng dụng viết tiểu thuyết cá nhân: thư viện tác phẩm, trình soạn thảo từng chương, tự lưu, đồng bộ giữa máy tính và điện thoại qua tài khoản Google, lịch sử phiên bản và thùng rác.
@@ -232,3 +233,6 @@ e2e/              test end-to-end (Playwright)
 ```
 
 Muốn đổi màu, font hoặc bo góc cho toàn app, chỉ cần sửa `src/styles/tokens.css`. Muốn đổi tên app, sửa `APP_NAME` trong `src/config.ts`.
+=======
+# blue-bird
+>>>>>>> d5d87006bd5b3fe1501bc59bba3aef660502d198
