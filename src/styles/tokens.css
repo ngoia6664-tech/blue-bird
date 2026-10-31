@@ -1,0 +1,71 @@
+/* Design tokens. Change the look of the whole app here; components only use these variables. */
+:root {
+  /* Ivory paper, ink blue, a warm gold glow. */
+  --color-bg: #f8f4ec;
+  --color-surface: #ffffff;
+  --color-surface-2: #f3eee4;
+  --color-surface-glass: rgb(255 255 255 / 0.72);
+  --color-border: #e6dfd2;
+  --color-border-strong: #d4cab8;
+  --color-text: #221f1a;
+  --color-text-muted: #6b6358;
+  --color-accent: #2d4a8a;
+  --color-accent-2: #4a6fc4;
+  --color-accent-contrast: #ffffff;
+  --color-accent-soft: #e6ecf8;
+  --color-glow: #e0a84a;
+  --color-glow-soft: #fbefd9;
+  --color-danger: #b3261e;
+  --color-warn: #8a5a00;
+  --color-success: #2e6b3a;
+  --color-focus: #2d6ae0;
+
+  --gradient-accent: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%);
+  --gradient-ambient:
+    radial-gradient(60rem 40rem at 100% -10%, rgb(224 168 74 / 0.16), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 110%, rgb(74 111 196 / 0.13), transparent 60%);
+
+  --font-ui: 'Be Vietnam Pro', system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Literata ships with the app: full Vietnamese glyphs (Georgia lacks stacked marks like ố, ộ). */
+  --font-prose: 'Literata Variable', 'Times New Roman', serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --prose-size: 1.125rem;
+  --prose-line: 1.85;
+  --prose-width: 40rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgb(34 31 26 / 0.05), 0 2px 6px rgb(34 31 26 / 0.05);
+  --shadow-2: 0 10px 30px -10px rgb(34 31 26 / 0.22), 0 4px 10px -4px rgb(34 31 26 / 0.08);
+  --shadow-glow: 0 6px 20px -6px rgb(45 74 138 / 0.55);
+  --shadow-paper: 0 1px 3px rgb(34 31 26 / 0.06), 0 12px 40px -18px rgb(34 31 26 / 0.18);
+
+  --topbar-h: 56px;
+  --sidebar-w: 280px;
+  --panel-w: 300px;
+  --duration: 160ms;
+  --duration-slow: 360ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+    --duration-slow: 0ms;
+  }
+}

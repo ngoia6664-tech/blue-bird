@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allowed Google accounts. Add the writer's email here, then `npm run deploy`.
+    // tests/rules.test.ts uses the first address.
+    function allowed() {
+      return request.auth.token.email in ['ngoia6664@gmail.com'];
+    }
+
+    function isOwner(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && allowed();
+    }
+
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+  }
+}
