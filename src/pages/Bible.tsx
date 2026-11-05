@@ -7,6 +7,7 @@ import { createBibleItem, saveStyleField, STYLE_ID, updateBibleField, updateBibl
 import { useBible, useChapters, useWork, useWorks } from '../data/hooks'
 import { formatDate } from '../format'
 import type { BibleItem, BibleKind, Chapter } from '../types'
+import { countRelations, PhotoPicker, RelationGraph } from './RelationGraph'
 
 type ListKind = Exclude<BibleKind, 'style'>
 type LinkKey = keyof BibleItem['links']
@@ -67,7 +68,10 @@ const STYLE_FIELDS: [string, string][] = [
 
 const LINK_LABEL: Record<LinkKey, string> = { characters: 'Nhân vật liên quan', places: 'Địa điểm liên quan', events: 'Sự kiện liên quan', chapters: 'Chương liên quan' }
 const LINK_KIND: Record<Exclude<LinkKey, 'chapters'>, ListKind> = { characters: 'character', places: 'place', events: 'event' }
-const TABS = [...(Object.keys(KINDS) as ListKind[]), 'style'] as const
+// Timeline events no longer have a tab: their data is kept, and a link to one still opens it.
+type Tab = ListKind | 'relations' | 'style'
+const TABS: Tab[] = ['character', 'relations', 'place', 'note', 'thread', 'style']
+const TAB_NAME = (t: Tab) => (t === 'style' ? 'Quy tắc văn phong' : t === 'relations' ? 'Quan hệ nhân vật' : KINDS[t].tab)
 /** Failures reach the user as a dialog (WorkBible listens for this event), not a browser alert. */
 const fail = (e: unknown) => dispatchEvent(new CustomEvent('bible-error', { detail: e instanceof Error ? e.message : String(e) }))
 const fold = (s: string) => s.normalize('NFC').toLocaleLowerCase('vi')
@@ -109,7 +113,7 @@ function WorkBible({ workId, works }: { workId: string; works: { id: string; tit
   const [params, setParams] = useSearchParams()
   const itemId = params.get('item')
   const linked = items?.find((b) => b.id === itemId)
-  const tab = (params.get('tab') as (typeof TABS)[number]) ?? (linked?.kind as ListKind) ?? 'character'
+  const tab = (params.get('tab') as Tab) ?? (linked?.kind as ListKind) ?? 'character'
   const set = (patch: Record<string, string | null>) =>
     setParams((p) => {
       for (const [k, v] of Object.entries(patch)) v === null ? p.delete(k) : p.set(k, v)
@@ -137,8 +141,8 @@ function WorkBible({ workId, works }: { workId: string; works: { id: string; tit
       <nav className="bible-tabs" role="tablist" aria-label="Danh mục sổ tay">
         {TABS.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'active' : undefined} onClick={() => set({ tab: t, item: null })}>
-            {t === 'style' ? 'Quy tắc văn phong' : KINDS[t].tab}
-            {t !== 'style' && items && <span className="badge">{items.filter((b) => b.kind === t && !b.deletedAt).length}</span>}
+            {TAB_NAME(t)}
+            {t !== 'style' && items && <span className="badge">{t === 'relations' ? countRelations(items) : items.filter((b) => b.kind === t && !b.deletedAt).length}</span>}
           </button>
         ))}
       </nav>
@@ -146,6 +150,8 @@ function WorkBible({ workId, works }: { workId: string; works: { id: string; tit
         <p className="page muted">Đang tải…</p>
       ) : tab === 'style' ? (
         <StyleRules workId={workId} item={items.find((b) => b.id === STYLE_ID)} />
+      ) : tab === 'relations' ? (
+        <RelationGraph workId={workId} items={items} onOpen={(id) => set({ tab: 'character', item: id })} onFail={fail} />
       ) : (
         <KindView
           key={tab}
@@ -310,6 +316,7 @@ function ItemEditor(p: { workId: string; item: BibleItem; def: KindDef; items: B
           ? <button className="btn small" onClick={() => save({ deletedAt: null })}><RotateCcw size={16} /> Khôi phục</button>
           : <button className="btn small" onClick={() => setConfirming(true)}><Trash2 size={16} /> Thùng rác</button>}
       </div>
+      {def.relations && <PhotoPicker name={item.name} value={item.photo ?? null} onChange={(photo) => save({ photo })} />}
       <Field label={`${def.nameLabel} *`} value={item.name} onSave={(v) => v.trim() && save({ name: v.trim() })} />
       {def.statuses && (
         <label className="field">

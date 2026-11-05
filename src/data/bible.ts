@@ -8,12 +8,12 @@ import { bibleCol, commit } from './refs'
 
 export const emptyLinks = (): BibleItem['links'] => ({ characters: [], places: [], events: [], chapters: [] })
 
-export async function createBibleItem(workId: string, kind: BibleKind, name: string, order: number, id?: string) {
+export async function createBibleItem(workId: string, kind: BibleKind, name: string, order: number, id?: string, photo?: string | null) {
   const ref = id ? doc(bibleCol(workId), id) : doc(bibleCol(workId))
   const now = Date.now()
   const item: Omit<BibleItem, 'id'> = {
     kind, name, fields: {}, status: '', order, tags: [], links: emptyLinks(), relations: [],
-    createdAt: now, updatedAt: now, deletedAt: null,
+    createdAt: now, updatedAt: now, deletedAt: null, ...(photo ? { photo } : {}),
   }
   const batch = writeBatch(db)
   batch.set(ref, item)

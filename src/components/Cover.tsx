@@ -29,6 +29,22 @@ export function Cover({ work, src }: { work: Pick<Work, 'id' | 'title' | 'hasCov
   )
 }
 
+/** A character portrait: square centre crop, small enough to live inside the character's own document. */
+export async function compressAvatar(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('File được chọn không phải ảnh.')
+  if (file.size > 20_000_000) throw new Error('Ảnh quá lớn (tối đa 20 MB).')
+  const bmp = await createImageBitmap(file)
+  const side = Math.min(bmp.width, bmp.height)
+  const canvas = Object.assign(document.createElement('canvas'), { width: 192, height: 192 })
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#fff' // the JPEG fallback would turn transparency black
+  ctx.fillRect(0, 0, 192, 192)
+  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 192, 192)
+  bmp.close()
+  const url = canvas.toDataURL('image/webp', 0.85)
+  return url.startsWith('data:image/webp') ? url : canvas.toDataURL('image/jpeg', 0.85) // Safari can't encode WebP
+}
+
 /** Downscale and compress an image file into a small data URL stored in Firestore. */
 export async function compressCover(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) throw new Error('File được chọn không phải ảnh.')

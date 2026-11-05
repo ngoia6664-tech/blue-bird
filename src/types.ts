@@ -92,8 +92,12 @@ export interface BibleItem {
   order: number
   tags: string[]
   links: { characters: string[]; places: string[]; events: string[]; chapters: string[] }
-  /** Character relations: "Hare → Bạn học → Megumi". */
-  relations: { targetId: string; label: string }[]
+  /** Character relations, stored on one side only: "Lan → học trò → Duy Anh". `reverse` is what the target is to this one ("thầy"); empty means the same word both ways. */
+  relations: { targetId: string; label: string; reverse?: string; group?: string; note?: string }[]
+  /** Character portrait: a small data URL. */
+  photo?: string | null
+  /** Where the character was last dragged to on the relation graph. */
+  graph?: { x: number; y: number }
   createdAt: number
   updatedAt: number
   deletedAt: number | null
