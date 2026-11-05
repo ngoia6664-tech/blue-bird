@@ -13,6 +13,10 @@ import '@fontsource/be-vietnam-pro/500.css'
 import '@fontsource/be-vietnam-pro/600.css'
 import './styles/tokens.css'
 import './styles/app.css'
+import { applyTheme, initialTheme, trackPointer } from './theme'
+
+applyTheme(initialTheme())
+trackPointer()
 
 const router = createBrowserRouter([
   {

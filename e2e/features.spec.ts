@@ -7,6 +7,15 @@ const acceptDialogs = (page: Page) => page.on('dialog', (d) => d.accept(d.type()
 const findCount = (page: Page) => page.locator('.find-count')
 const findBox = (page: Page) => page.getByRole('searchbox', { name: 'Tìm trong chương' })
 
+/** Story Bible: the "Thêm …" button opens a dialog asking for the entry's name. */
+async function addEntry(page: Page, kind: string, name: string) {
+  await page.getByRole('button', { name: `Thêm ${kind}`, exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: `Thêm ${kind}` })
+  await dialog.getByRole('textbox').fill(name)
+  await dialog.getByRole('button', { name: `Thêm ${kind}`, exact: true }).click()
+  await expect(dialog).toBeHidden()
+}
+
 async function typeBold(page: Page, text: string) {
   await page.keyboard.press('Control+b')
   await page.keyboard.type(text)
@@ -272,16 +281,15 @@ test('backup downloads a ZIP that restores as a copy without touching the origin
 
 test('Story Bible: characters, relations, chapter links, timeline and style rules, kept per work', async ({ page }) => {
   await signIn(page)
-  const answers = ['Hare', 'Megumi', 'Trận chiến Shibuya']
-  page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? answers.shift() : undefined))
+  page.on('dialog', (d) => d.accept())
   await createWork(page, `Sổ tay ${Date.now()}`)
   await typeIn(page, 'Chương có Hare.')
   await page.getByRole('link', { name: 'Sổ tay truyện', exact: true }).click()
 
-  await page.getByRole('button', { name: 'Thêm nhân vật' }).click()
+  await addEntry(page, 'nhân vật', 'Hare')
   await page.getByLabel('Vai trò').fill('Học sinh năm nhất')
   await page.getByLabel('Vai trò').blur()
-  await page.getByRole('button', { name: 'Thêm nhân vật' }).click()
+  await addEntry(page, 'nhân vật', 'Megumi')
   await expect(page.getByRole('region', { name: 'Hồ sơ Megumi' })).toBeVisible() // a new item opens itself once created
   await page.getByRole('button', { name: /^Hare/ }).click()
   await expect(page.getByLabel('Vai trò')).toHaveValue('Học sinh năm nhất')
@@ -293,7 +301,7 @@ test('Story Bible: characters, relations, chapter links, timeline and style rule
   await expect(page.locator('.link-chips')).toContainText('Chương 1')
 
   await page.getByRole('tab', { name: /Dòng thời gian/ }).click()
-  await page.getByRole('button', { name: 'Thêm sự kiện' }).click()
+  await addEntry(page, 'sự kiện', 'Trận chiến Shibuya')
   await page.getByLabel('Mốc thời gian trong truyện').fill('Ba ngày sau trận chiến')
   await page.getByLabel('Mốc thời gian trong truyện').blur()
   await expect(page.locator('.bible-items')).toContainText('Ba ngày sau trận chiến')
@@ -378,7 +386,7 @@ test('reloading right after typing keeps the text (unsaved-changes guard + emerg
 test('phone: find button, chapter drawer and Story Bible list/detail @mobile', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'phone layout only')
   await signIn(page)
-  page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Yuji' : undefined))
+  page.on('dialog', (d) => d.accept())
   await createWork(page, `Điện thoại ${Date.now()}`)
   await typeIn(page, 'Yuji chạy. Yuji cười.')
   await page.getByRole('button', { name: 'Tìm trong chương (Ctrl+F)' }).first().click()
@@ -391,7 +399,7 @@ test('phone: find button, chapter drawer and Story Bible list/detail @mobile', a
   await page.locator('.scrim').click({ position: { x: page.viewportSize()!.width - 10, y: 300 } })
 
   await page.getByRole('link', { name: 'Sổ tay truyện', exact: true }).click()
-  await page.getByRole('button', { name: 'Thêm nhân vật' }).click()
+  await addEntry(page, 'nhân vật', 'Yuji')
   await expect(page.getByLabel('Tên chính *')).toHaveValue('Yuji')
   await page.getByRole('button', { name: 'Danh sách' }).click()
   await expect(page.getByRole('button', { name: /^Yuji/ })).toBeVisible()

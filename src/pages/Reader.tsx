@@ -1,6 +1,6 @@
 import { EditorContent, useEditor } from '@tiptap/react'
 import { getDoc } from 'firebase/firestore'
-import { ChevronLeft, ChevronRight, Minus, PenLine, Plus, Type, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Minus, PenLine, Plus, Type, X } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useChapters, useWork } from '../data/hooks'
@@ -16,16 +16,29 @@ interface Prefs {
   line: number
   font: 'serif' | 'sans'
   width: 'narrow' | 'medium' | 'wide'
-  theme: 'light' | 'sepia' | 'dark'
+  /** auto follows the app's light/dark toggle; sepia is the paper look. */
+  theme: 'auto' | 'sepia'
 }
-const PREFS_KEY = 'blue-bird-reader'
-const defaults: Prefs = { size: 19, line: 1.8, font: 'serif', width: 'medium', theme: 'light' }
+const PREFS_KEY = 'blue-bird-reader-v2'
+const defaults: Prefs = { size: 19, line: 1.8, font: 'serif', width: 'medium', theme: 'auto' }
 const readKey = (workId: string) => `blue-bird-last-read:${workId}`
 const WIDTH = { narrow: '34rem', medium: '42rem', wide: '54rem' }
 
 function usePrefs() {
-  const [prefs, setPrefs] = useState<Prefs>(() => ({ ...defaults, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }))
+  const [prefs, setPrefs] = useState<Prefs>(() => {
+    // v2 made the dark theme the default: carry size/font over from v1 but let the new default theme win.
+    const { theme: _old, ...v1 } = JSON.parse(localStorage.getItem('blue-bird-reader') ?? '{}')
+    const saved = { ...defaults, ...v1, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }
+    // Older saves hold 'dark' or 'light', which are now just "follow the app".
+    return { ...saved, theme: saved.theme === 'sepia' ? 'sepia' : 'auto' }
+  })
   useEffect(() => localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)), [prefs])
+  // Flipping the app's light/dark toggle takes the reader back to following it, even from the paper look.
+  useEffect(() => {
+    const watch = new MutationObserver(() => setPrefs((p) => (p.theme === 'auto' ? p : { ...p, theme: 'auto' })))
+    watch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => watch.disconnect()
+  }, [])
   return [prefs, (patch: Partial<Prefs>) => setPrefs((p) => ({ ...p, ...patch }))] as const
 }
 
@@ -42,6 +55,12 @@ export function Reader() {
   const [showPrefs, setShowPrefs] = useState(false)
   const [content, setContent] = useState<{ json: string; local: boolean } | null | 'error'>(null)
   const top = useRef<HTMLDivElement>(null)
+  /** The app's .main element is the scroller, not the window. */
+  const scrollTo = (where: 'top' | 'bottom') => {
+    const main = top.current?.closest('.main')
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches
+    main?.scrollTo({ top: where === 'top' ? 0 : main.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
+  }
 
   useEffect(() => {
     if (!workId || !chapters || chapterId) return
@@ -95,9 +114,15 @@ export function Reader() {
     <div className={`reader theme-${prefs.theme} font-${prefs.font}`} style={style}>
       <header className="reader-bar">
         <Link className="icon-btn" to={`/write/${workId}${chapter ? `/${chapter.id}` : ''}`} aria-label="Trở lại chỉnh sửa" title="Trở lại chỉnh sửa"><PenLine size={18} /></Link>
+        <div className="chapter-switch">
+          {prev ? <Link className="icon-btn" to={`/read/${workId}/${prev.id}`} aria-label="Chương trước" title="Chương trước"><ChevronLeft size={18} /></Link> : <span className="icon-btn" aria-disabled="true"><ChevronLeft size={18} /></span>}
+          <span className="chapter-count" aria-live="polite">{index + 1}<small>/{live.length}</small></span>
+          {next ? <Link className="icon-btn" to={`/read/${workId}/${next.id}`} aria-label="Chương sau" title="Chương sau"><ChevronRight size={18} /></Link> : <span className="icon-btn" aria-disabled="true"><ChevronRight size={18} /></span>}
+        </div>
         <select aria-label="Chọn chương" value={chapterId ?? ''} onChange={(e) => navigate(`/read/${workId}/${e.target.value}`)}>
           {live.map((c) => <option key={c.id} value={c.id}>{chapterHeading(c)}</option>)}
         </select>
+        <span className="spacer" />
         <button className="icon-btn" aria-label="Tùy chỉnh đọc" title="Tùy chỉnh đọc" aria-expanded={showPrefs} onClick={() => setShowPrefs((s) => !s)}><Type size={18} /></button>
       </header>
       {showPrefs && (
@@ -119,27 +144,33 @@ export function Reader() {
             <select value={prefs.width} onChange={(e) => setPref({ width: e.target.value as Prefs['width'] })}><option value="narrow">Hẹp</option><option value="medium">Vừa</option><option value="wide">Rộng</option></select>
           </label>
           <label className="pref"><span>Nền</span>
-            <select value={prefs.theme} onChange={(e) => setPref({ theme: e.target.value as Prefs['theme'] })}><option value="light">Sáng</option><option value="sepia">Giấy cũ</option><option value="dark">Tối</option></select>
+            <select value={prefs.theme} onChange={(e) => setPref({ theme: e.target.value as Prefs['theme'] })}><option value="auto">Theo giao diện chung</option><option value="sepia">Giấy cũ</option></select>
           </label>
           <button className="icon-btn" aria-label="Đóng tùy chỉnh" onClick={() => setShowPrefs(false)}><X size={16} /></button>
         </div>
       )}
       <article className="reader-page" ref={top}>
-        <p className="reader-work">{work?.title}</p>
-        {chapter ? (
-          <>
-            <h1 className="reader-title">{chapter.label}{chapter.title && <small>{chapter.title}</small>}</h1>
-            <p className="reader-meta">{formatNumber(words)} từ · ~{estimatePages(words)} trang (ước tính) · chương {index + 1}/{live.length}</p>
-            {content && content !== 'error' && content.local && <p className="notice small">Đang hiển thị bản trên máy này (chưa đồng bộ lên cloud).</p>}
-            {content === 'error' && <p className="error" role="alert">Chưa tải được nội dung chương (có thể đang ngoại tuyến).</p>}
-            {content === null && <p className="muted">Đang tải…</p>}
-            <EditorContent editor={editor} hidden={!content || content === 'error'} />
-            {nav}
-          </>
-        ) : (
-          <p className="muted">Tác phẩm chưa có chương nào.</p>
-        )}
+        <div className="reader-card">
+          <p className="reader-work">{work?.title}</p>
+          {chapter ? (
+            <>
+              <h1 className="reader-title">{chapter.label}{chapter.title && <small>{chapter.title}</small>}</h1>
+              <p className="reader-meta">{formatNumber(words)} từ · ~{estimatePages(words)} trang (ước tính) · chương {index + 1}/{live.length}</p>
+              {content && content !== 'error' && content.local && <p className="notice small">Đang hiển thị bản trên máy này (chưa đồng bộ lên cloud).</p>}
+              {content === 'error' && <p className="error" role="alert">Chưa tải được nội dung chương (có thể đang ngoại tuyến).</p>}
+              {content === null && <p className="muted">Đang tải…</p>}
+              <EditorContent editor={editor} hidden={!content || content === 'error'} />
+            </>
+          ) : (
+            <p className="muted">Tác phẩm chưa có chương nào.</p>
+          )}
+        </div>
+        {chapter && nav}
       </article>
+      <div className="scroll-dock">
+        <button className="icon-btn" onClick={() => scrollTo('top')} aria-label="Lên đầu trang" title="Lên đầu trang"><ChevronsUp size={18} /></button>
+        <button className="icon-btn" onClick={() => scrollTo('bottom')} aria-label="Xuống cuối trang" title="Xuống cuối trang"><ChevronsDown size={18} /></button>
+      </div>
     </div>
   )
 }

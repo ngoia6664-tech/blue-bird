@@ -1,7 +1,8 @@
-import { ArrowDown, ArrowLeft, ArrowUp, BookMarked, ClipboardCopy, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowDown, ArrowLeft, ArrowUp, BookMarked, CalendarClock, ClipboardCopy, GitBranch, MapPin, Plus, RotateCcw, Search, StickyNote, Trash2, TriangleAlert, UserRound, X, type LucideIcon } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { lastWorkKey } from '../components/AppLayout'
+import { Modal } from '../components/Modal'
 import { createBibleItem, saveStyleField, STYLE_ID, updateBibleField, updateBibleItem } from '../data/bible'
 import { useBible, useChapters, useWork, useWorks } from '../data/hooks'
 import { formatDate } from '../format'
@@ -13,6 +14,7 @@ type LinkKey = keyof BibleItem['links']
 interface KindDef {
   tab: string
   one: string
+  icon: LucideIcon
   nameLabel: string
   fields: [key: string, label: string, multiline: boolean, placeholder?: string][]
   statuses?: [string, string][]
@@ -26,7 +28,7 @@ interface KindDef {
 // What each kind of entry asks for. Every field is optional except the name.
 const KINDS: Record<ListKind, KindDef> = {
   character: {
-    tab: 'Nhân vật', one: 'nhân vật', nameLabel: 'Tên chính',
+    tab: 'Nhân vật', one: 'nhân vật', icon: UserRound, nameLabel: 'Tên chính',
     fields: [
       ['aliases', 'Bí danh', false], ['role', 'Vai trò', false], ['age', 'Tuổi', false],
       ['appearance', 'Ngoại hình', true], ['personality', 'Tính cách', true], ['bio', 'Tiểu sử', true],
@@ -35,22 +37,22 @@ const KINDS: Record<ListKind, KindDef> = {
     links: ['chapters'], relations: true, subtitle: (b) => [b.fields.role, b.fields.aliases].filter(Boolean).join(' · '),
   },
   event: {
-    tab: 'Dòng thời gian', one: 'sự kiện', nameLabel: 'Tên sự kiện',
+    tab: 'Dòng thời gian', one: 'sự kiện', icon: CalendarClock, nameLabel: 'Tên sự kiện',
     fields: [['time', 'Mốc thời gian trong truyện', false, 'VD: Ba ngày sau trận chiến'], ['description', 'Mô tả', true]],
     statuses: [['planned', 'Dự kiến'], ['written', 'Đã viết'], ['revise', 'Cần sửa']],
     links: ['characters', 'places', 'chapters'], subtitle: (b) => b.fields.time ?? '',
   },
   place: {
-    tab: 'Địa điểm', one: 'địa điểm', nameLabel: 'Tên địa điểm',
+    tab: 'Địa điểm', one: 'địa điểm', icon: MapPin, nameLabel: 'Tên địa điểm',
     fields: [['description', 'Mô tả', true], ['features', 'Đặc điểm', true], ['notes', 'Ghi chú', true]],
     links: ['characters', 'events', 'chapters'],
   },
   note: {
-    tab: 'Ghi chú', one: 'ghi chú', nameLabel: 'Tiêu đề',
+    tab: 'Ghi chú', one: 'ghi chú', icon: StickyNote, nameLabel: 'Tiêu đề',
     fields: [['body', 'Nội dung', true]], links: ['chapters'], tags: true, subtitle: (b) => b.tags.map((t) => `#${t}`).join(' '),
   },
   thread: {
-    tab: 'Tình tiết đang mở', one: 'tình tiết', nameLabel: 'Tên tình tiết',
+    tab: 'Tình tiết đang mở', one: 'tình tiết', icon: GitBranch, nameLabel: 'Tên tình tiết',
     fields: [['description', 'Mô tả', true], ['notes', 'Ghi chú', true]],
     statuses: [['open', 'Chưa giải quyết'], ['developing', 'Đang phát triển'], ['resolved', 'Đã giải quyết']],
     links: ['characters', 'chapters'], startChapter: true,
@@ -66,7 +68,8 @@ const STYLE_FIELDS: [string, string][] = [
 const LINK_LABEL: Record<LinkKey, string> = { characters: 'Nhân vật liên quan', places: 'Địa điểm liên quan', events: 'Sự kiện liên quan', chapters: 'Chương liên quan' }
 const LINK_KIND: Record<Exclude<LinkKey, 'chapters'>, ListKind> = { characters: 'character', places: 'place', events: 'event' }
 const TABS = [...(Object.keys(KINDS) as ListKind[]), 'style'] as const
-const fail = (e: unknown) => alert(`Thao tác thất bại: ${e instanceof Error ? e.message : e}`)
+/** Failures reach the user as a dialog (WorkBible listens for this event), not a browser alert. */
+const fail = (e: unknown) => dispatchEvent(new CustomEvent('bible-error', { detail: e instanceof Error ? e.message : String(e) }))
 const fold = (s: string) => s.normalize('NFC').toLocaleLowerCase('vi')
 
 export function Bible() {
@@ -112,6 +115,12 @@ function WorkBible({ workId, works }: { workId: string; works: { id: string; tit
       for (const [k, v] of Object.entries(patch)) v === null ? p.delete(k) : p.set(k, v)
       return p
     })
+  const [failure, setFailure] = useState<string | null>(null)
+  useEffect(() => {
+    const show = (e: Event) => setFailure((e as CustomEvent<string>).detail)
+    addEventListener('bible-error', show)
+    return () => removeEventListener('bible-error', show)
+  }, [])
 
   if (error) return <p className="page error" role="alert">Không tải được sổ tay: {error.message}</p>
   if (work === null) return <p className="page">Không tìm thấy tác phẩm. <Link to="/bible">Chọn tác phẩm khác</Link></p>
@@ -148,7 +157,51 @@ function WorkBible({ workId, works }: { workId: string; works: { id: string; tit
           onSelect={(id) => set({ tab, item: id })}
         />
       )}
+      {failure && (
+        <Modal icon={<TriangleAlert size={24} />} danger kicker="Sổ tay truyện" title="Thao tác thất bại" onClose={() => setFailure(null)}>
+          <p>{failure}</p>
+          <div className="modal-actions"><button className="btn primary" onClick={() => setFailure(null)}>Đã hiểu</button></div>
+        </Modal>
+      )}
     </div>
+  )
+}
+
+/** Asks for the name of a new entry; the badge icon is the one for that kind of entry. */
+function AddDialog(p: { def: KindDef; onClose: () => void; onAdd: (name: string) => Promise<void> }) {
+  const Icon = p.def.icon
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const input = useRef<HTMLInputElement>(null)
+  // The Modal opens itself in its own effect, which runs before this one.
+  useEffect(() => input.current?.focus(), [])
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setBusy(true)
+    setError('')
+    try {
+      await p.onAdd(name.trim())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setBusy(false)
+    }
+  }
+  return (
+    <Modal icon={<Icon size={24} />} kicker="Sổ tay truyện" title={`Thêm ${p.def.one}`} onClose={p.onClose} locked={busy}>
+      <form onSubmit={submit}>
+        <label className="field">
+          <span>{p.def.nameLabel} *</span>
+          <input ref={input} value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+        {error && <p className="error" role="alert">Thao tác thất bại: {error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn" disabled={busy} onClick={p.onClose}>Hủy</button>
+          <button type="submit" className="btn primary" disabled={!name.trim() || busy}><Plus size={18} /> Thêm {p.def.one}</button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -157,6 +210,7 @@ function KindView(p: { workId: string; kind: ListKind; items: BibleItem[]; chapt
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<'order' | 'name' | 'updated'>(p.kind === 'event' ? 'order' : 'name')
   const [trash, setTrash] = useState(false)
+  const [adding, setAdding] = useState(false)
   const ofKind = p.items.filter((b) => b.kind === p.kind)
   const needle = fold(q.trim())
   const list = ofKind
@@ -166,10 +220,9 @@ function KindView(p: { workId: string; kind: ListKind; items: BibleItem[]; chapt
   const selected = ofKind.find((b) => b.id === p.selectedId)
   const trashed = ofKind.filter((b) => b.deletedAt).length
 
-  async function add() {
-    const name = prompt(`${def.nameLabel}:`)
-    if (!name?.trim()) return
-    const id = await createBibleItem(p.workId, p.kind, name.trim(), Math.max(0, ...ofKind.map((b) => b.order)) + 1)
+  async function add(name: string) {
+    const id = await createBibleItem(p.workId, p.kind, name, Math.max(0, ...ofKind.map((b) => b.order)) + 1)
+    setAdding(false)
     setTrash(false)
     p.onSelect(id)
   }
@@ -183,7 +236,8 @@ function KindView(p: { workId: string; kind: ListKind; items: BibleItem[]; chapt
   return (
     <div className={`bible-body ${selected ? 'has-detail' : ''}`}>
       <section className="bible-list" aria-label={`Danh sách ${def.one}`}>
-        <button className="btn primary" onClick={() => add().catch(fail)}><Plus size={18} /> Thêm {def.one}</button>
+        <button className="btn primary" onClick={() => setAdding(true)}><Plus size={18} /> Thêm {def.one}</button>
+        {adding && <AddDialog def={def} onClose={() => setAdding(false)} onAdd={add} />}
         <label className="search">
           <Search size={16} aria-hidden="true" />
           <input type="search" aria-label={`Tìm ${def.one}`} placeholder={`Tìm ${def.one}`} value={q} onChange={(e) => setQ(e.target.value)} />
@@ -245,6 +299,7 @@ function ItemEditor(p: { workId: string; item: BibleItem; def: KindDef; items: B
   const characters = p.items.filter((b) => b.kind === 'character' && !b.deletedAt && b.id !== item.id)
   const [relLabel, setRelLabel] = useState('')
   const [relTarget, setRelTarget] = useState('')
+  const [confirming, setConfirming] = useState(false)
 
   return (
     <section className="bible-detail" aria-label={`Hồ sơ ${item.name}`}>
@@ -253,7 +308,7 @@ function ItemEditor(p: { workId: string; item: BibleItem; def: KindDef; items: B
         <span className="muted small">Sửa: {formatDate(item.updatedAt)}</span>
         {item.deletedAt
           ? <button className="btn small" onClick={() => save({ deletedAt: null })}><RotateCcw size={16} /> Khôi phục</button>
-          : <button className="btn small" onClick={() => confirm(`Đưa "${item.name}" vào thùng rác?`) && save({ deletedAt: Date.now() })}><Trash2 size={16} /> Thùng rác</button>}
+          : <button className="btn small" onClick={() => setConfirming(true)}><Trash2 size={16} /> Thùng rác</button>}
       </div>
       <Field label={`${def.nameLabel} *`} value={item.name} onSave={(v) => v.trim() && save({ name: v.trim() })} />
       {def.statuses && (
@@ -331,6 +386,15 @@ function ItemEditor(p: { workId: string; item: BibleItem; def: KindDef; items: B
           </fieldset>
         )
       })}
+      {confirming && (
+        <Modal icon={<Trash2 size={24} />} danger kicker="Sổ tay truyện" title="Đưa vào thùng rác?" onClose={() => setConfirming(false)}>
+          <p>“{item.name}” sẽ được chuyển vào thùng rác. Bạn có thể khôi phục lại bất cứ lúc nào.</p>
+          <div className="modal-actions">
+            <button className="btn" onClick={() => setConfirming(false)}>Hủy</button>
+            <button className="btn danger" onClick={() => { setConfirming(false); save({ deletedAt: Date.now() }) }}><Trash2 size={18} /> Đưa vào thùng rác</button>
+          </div>
+        </Modal>
+      )}
     </section>
   )
 }

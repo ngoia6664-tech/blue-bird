@@ -1,14 +1,17 @@
-import { BookMarked, BookOpen, Feather, LogIn, LogOut, PenLine, RefreshCw, Settings as SettingsIcon } from 'lucide-react'
+import { BookMarked, BookOpen, ChevronLeft, Feather, LogIn, LogOut, Moon, PenLine, RefreshCw, Settings as SettingsIcon, Sun } from 'lucide-react'
 import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { signInWithGoogle, signOutUser, useAuth } from '../auth/AuthProvider'
 import { APP_NAME } from '../config'
 import { useSyncStatus } from '../sync/engine'
 import { useEffect, useState } from 'react'
+import { useTheme } from '../theme'
 
 export const lastWorkKey = 'novel-studio-last-work'
+const navCollapsedKey = 'novel-studio-nav-collapsed'
 
 export function AppLayout() {
   const auth = useAuth()
+  const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem(navCollapsedKey) === '1')
   useLocation() // re-render on navigation so the Viết / Sổ tay links follow the last opened work
   if (auth.status === 'loading') return <div className="center-screen">Đang tải…</div>
   if (auth.status === 'signedOut') return <LoginScreen />
@@ -26,6 +29,11 @@ export function AppLayout() {
     )
   }
   const lastWork = localStorage.getItem(lastWorkKey)
+  const toggleNav = () => {
+    const next = !navCollapsed
+    setNavCollapsed(next)
+    localStorage.setItem(navCollapsedKey, next ? '1' : '0')
+  }
   return (
     <div className="app">
       <header className="topbar">
@@ -33,13 +41,23 @@ export function AppLayout() {
           <span className="logo" aria-hidden="true"><Feather size={18} /></span>
           <span className="brand-name">{APP_NAME}</span>
         </NavLink>
-        <nav className="tabs" aria-label="Điều hướng chính">
-          <NavLink to="/" end><BookOpen size={18} /><span>Thư viện</span></NavLink>
-          <NavLink to={lastWork ? `/write/${lastWork}` : '/write'}><PenLine size={18} /><span>Viết</span></NavLink>
-          <NavLink to={lastWork ? `/bible/${lastWork}` : '/bible'}><BookMarked size={18} /><span>Sổ tay truyện</span></NavLink>
-          <NavLink to="/settings"><SettingsIcon size={18} /><span>Cài đặt</span></NavLink>
+        <nav className={`tabs ${navCollapsed ? 'collapsed' : ''}`} aria-label="Điều hướng chính">
+          <NavLink to="/" end title="Thư viện"><BookOpen size={18} /><span>Thư viện</span></NavLink>
+          <NavLink to={lastWork ? `/write/${lastWork}` : '/write'} title="Viết"><PenLine size={18} /><span>Viết</span></NavLink>
+          <NavLink to={lastWork ? `/bible/${lastWork}` : '/bible'} title="Sổ tay truyện"><BookMarked size={18} /><span>Sổ tay truyện</span></NavLink>
+          <NavLink to="/settings" title="Cài đặt"><SettingsIcon size={18} /><span>Cài đặt</span></NavLink>
+          <button
+            type="button"
+            className="nav-collapse-btn"
+            onClick={toggleNav}
+            aria-label={navCollapsed ? 'Mở rộng điều hướng' : 'Thu gọn điều hướng'}
+            title={navCollapsed ? 'Mở rộng điều hướng' : 'Thu gọn điều hướng'}
+          >
+            <ChevronLeft size={14} />
+          </button>
         </nav>
         <SyncBadge />
+        <ThemeButton />
         <NavLink to="/settings" className="avatar" aria-label="Tài khoản">
           {auth.user.photoURL ? <img src={auth.user.photoURL} alt="" referrerPolicy="no-referrer" /> : (auth.user.email ?? '?')[0]}
         </NavLink>
@@ -69,6 +87,16 @@ export function SyncBadge() {
       <span className="dot" aria-hidden="true" />
       <span className="sync-text">{label}</span>
     </span>
+  )
+}
+
+function ThemeButton() {
+  const [theme, toggle] = useTheme()
+  const label = theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'
+  return (
+    <button className="icon-btn theme-btn" onClick={toggle} aria-label={label} title={label}>
+      {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
   )
 }
 

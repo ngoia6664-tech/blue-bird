@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <!-- Placeholder app icon: replace with the final artwork. -->
-  <rect width="512" height="512" rx="112" fill="#2d4a8a"/>
-  <path d="M352 120c-92 8-170 74-188 166l-28 106 28-14c10-48 34-92 70-124-20 34-34 74-38 116 82-14 146-80 156-162l-46 18 58-52c-2-20-6-38-12-54z" fill="#f8f4ec"/>
+  <rect width="512" height="512" rx="112" fill="#1c4ed8"/>
+  <path d="M352 120c-92 8-170 74-188 166l-28 106 28-14c10-48 34-92 70-124-20 34-34 74-38 116 82-14 146-80 156-162l-46 18 58-52c-2-20-6-38-12-54z" fill="#f2f6fd"/>
 </svg>

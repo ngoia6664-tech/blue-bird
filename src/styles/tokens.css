@@ -1,29 +1,46 @@
 /* Design tokens. Change the look of the whole app here; components only use these variables. */
 :root {
-  /* Ivory paper, ink blue, a warm gold glow. */
-  --color-bg: #f8f4ec;
-  --color-surface: #ffffff;
-  --color-surface-2: #f3eee4;
-  --color-surface-glass: rgb(255 255 255 / 0.72);
-  --color-border: #e6dfd2;
-  --color-border-strong: #d4cab8;
-  --color-text: #221f1a;
-  --color-text-muted: #6b6358;
-  --color-accent: #2d4a8a;
-  --color-accent-2: #4a6fc4;
+  /* Night sky: deep navy, starlight blue, a sky-blue glow. */
+  color-scheme: dark;
+  --color-bg: #070d1c;
+  --color-surface: #0f1830;
+  --color-surface-2: #16213d;
+  --color-surface-glass: rgb(15 24 48 / 0.72);
+  --color-border: #223159;
+  --color-border-strong: #34497d;
+  --color-text: #e6ecfa;
+  --color-text-muted: #97a6c6;
+  --color-accent: #7aa2ff;
+  --color-accent-2: #3b82f6;
   --color-accent-contrast: #ffffff;
-  --color-accent-soft: #e6ecf8;
-  --color-glow: #e0a84a;
-  --color-glow-soft: #fbefd9;
-  --color-danger: #b3261e;
-  --color-warn: #8a5a00;
-  --color-success: #2e6b3a;
-  --color-focus: #2d6ae0;
+  --color-accent-soft: #182b58;
+  --color-glow: #38bdf8;
+  --color-glow-soft: #0f2f4a;
+  --color-warn-soft: #3a2c12;
+  --color-danger: #ff7a7a;
+  --color-warn: #f2b84b;
+  --color-success: #4ade80;
+  --color-focus: #8fb4ff;
+  --color-hover: rgb(255 255 255 / 0.05);
+  /* Space-separated RGB of the hover/click effects, so rules can set their own alpha. */
+  --fx-rgb: 122 162 255;
+  /* Soft light that follows the pointer across the background. */
+  --spot: rgb(122 162 255 / 0.2);
 
-  --gradient-accent: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%);
+  --gradient-accent: linear-gradient(135deg, #2a56e0 0%, #3b82f6 100%);
   --gradient-ambient:
-    radial-gradient(60rem 40rem at 100% -10%, rgb(224 168 74 / 0.16), transparent 60%),
-    radial-gradient(50rem 36rem at -10% 110%, rgb(74 111 196 / 0.13), transparent 60%);
+    radial-gradient(60rem 40rem at 100% -10%, rgb(59 130 246 / 0.3), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 110%, rgb(56 189 248 / 0.18), transparent 60%),
+    radial-gradient(40rem 30rem at 50% 120%, rgb(99 102 241 / 0.22), transparent 70%);
+  /* Six star layers, each with its own tile size so the repeats never line up into a visible grid. */
+  --stars-size: 290px 290px, 370px 370px, 430px 430px, 510px 510px, 610px 610px, 730px 730px;
+  --stars:
+    radial-gradient(1px 1px at 20px 30px, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 140px 90px, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 90px 160px, rgb(186 222 255 / 0.8), transparent),
+    radial-gradient(1px 1px at 230px 210px, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 60px 260px, rgb(186 222 255 / 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 180px 20px, rgb(255 255 255 / 0.55), transparent);
 
   --font-ui: 'Be Vietnam Pro', system-ui, 'Segoe UI', Roboto, sans-serif;
   /* Literata ships with the app: full Vietnamese glyphs (Georgia lacks stacked marks like ố, ộ). */
@@ -50,17 +67,56 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --shadow-1: 0 1px 2px rgb(34 31 26 / 0.05), 0 2px 6px rgb(34 31 26 / 0.05);
-  --shadow-2: 0 10px 30px -10px rgb(34 31 26 / 0.22), 0 4px 10px -4px rgb(34 31 26 / 0.08);
-  --shadow-glow: 0 6px 20px -6px rgb(45 74 138 / 0.55);
-  --shadow-paper: 0 1px 3px rgb(34 31 26 / 0.06), 0 12px 40px -18px rgb(34 31 26 / 0.18);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.08);
+  --shadow-2: 0 12px 32px -10px rgb(0 0 0 / 0.35), 0 4px 12px -4px rgb(0 0 0 / 0.15);
+  --shadow-glow: 0 6px 20px -5px rgb(var(--fx-rgb) / 0.55);
+  --shadow-paper: 0 1px 3px rgb(0 0 0 / 0.08), 0 16px 44px -18px rgb(0 0 0 / 0.28);
 
   --topbar-h: 56px;
   --sidebar-w: 280px;
   --panel-w: 300px;
-  --duration: 160ms;
-  --duration-slow: 360ms;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration: 200ms;
+  --duration-slow: 380ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Light theme: emerald botanical green on soft morning paper. Chosen in the top bar, stored per device. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f2f8f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #e6f3ec;
+  --color-surface-glass: rgb(255 255 255 / 0.82);
+  --color-border: #d0e5da;
+  --color-border-strong: #a6ceb9;
+  --color-text: #0e291d;
+  --color-text-muted: #4b6a5b;
+  --color-accent: #059669;
+  --color-accent-2: #10b981;
+  --color-accent-contrast: #ffffff;
+  --color-accent-soft: #d1fae5;
+  --color-glow: #10b981;
+  --color-glow-soft: #dcfce7;
+  --color-warn-soft: #fef3c7;
+  --color-danger: #dc2626;
+  --color-warn: #b45309;
+  --color-success: #059669;
+  --color-focus: #10b981;
+  --color-hover: rgb(14 41 29 / 0.045);
+  --fx-rgb: 16 185 129;
+  --spot: rgb(16 185 129 / 0.12);
+  --gradient-accent: linear-gradient(135deg, #047857 0%, #10b981 100%);
+  --gradient-ambient:
+    radial-gradient(60rem 40rem at 100% -10%, rgb(16 185 129 / 0.18), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 110%, rgb(52 211 153 / 0.14), transparent 60%),
+    radial-gradient(40rem 30rem at 50% 0%, rgb(167 243 208 / 0.25), transparent 70%);
+  --stars: none;
+  --stars-size: auto;
+  --shadow-1: 0 1px 2px rgb(14 41 29 / 0.05), 0 2px 6px rgb(14 41 29 / 0.05);
+  --shadow-2: 0 12px 30px -10px rgb(14 41 29 / 0.16), 0 4px 10px -4px rgb(14 41 29 / 0.06);
+  --shadow-glow: 0 8px 22px -6px rgb(16 185 129 / 0.5);
+  --shadow-paper: 0 1px 3px rgb(14 41 29 / 0.06), 0 14px 40px -18px rgb(14 41 29 / 0.16);
 }
 
 @media (prefers-reduced-motion: reduce) {
